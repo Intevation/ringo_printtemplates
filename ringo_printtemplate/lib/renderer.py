@@ -34,13 +34,20 @@ class PrintDialogRenderer(DialogRenderer):
                                                      'ringo_printtemplate',
                                                      '.')))
         form_config = config.get_form('default')
+        # Load available_printtemplates and put them into the form as
+        # external data. This than later used to render the available
+        # printtemplates.
+        mid = clazz._modul_id
+        values = {}
+        values['printtemplates'] = [(p, p.id) for p in self._item.printtemplates]
         self.form = Form(form_config,
                          item=clazz,
                          csrf_token=self._request.session.get_csrf_token(),
                          dbsession=request.db,
                          translate=request.translate,
                          url_prefix=get_app_url(request),
-                         eval_url=get_eval_url())
+                         eval_url=get_eval_url(),
+                         values=values)
 
     def render(self):
         modul = get_item_modul(self._request, self._item)
@@ -54,10 +61,7 @@ class PrintDialogRenderer(DialogRenderer):
         values['ok_text'] = template_modul.get_label(plural=False)
         values['ok_url'] = self._request.current_route_path()
         values['_'] = self._request.translate
-        if len(self._request.session['history'].history) > 1:
-            values['cancel_url'] = self._request.session['history'].history[-2]  # Get the page before the current page.
-        else:
-            values['cancel_url'] = self._request.url.replace("print", "read")
+        values['cancel_url'] = self._request.ringo.history.last() or self._request.url.replace("print", "read")
         values['eval_url'] = self.form._eval_url
         values['h'] = ringo.lib.helpers
         return literal(self.template.render(**values))
